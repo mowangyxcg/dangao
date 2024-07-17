@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>两层生日蛋糕粒子效果</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: black;
+            font-family: Arial, sans-serif;
+        }
+        #fireworksCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="fireworksCanvas"></canvas>
+    <script>
+        const canvas = document.getElementById('fireworksCanvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        const particles = [];
+        const cakeColors = [
+            '255, 182, 193', // Light Pink
+            '255, 105, 180'  // Hot Pink
+        ];
+        const flameColor = '255, 140, 0'; // Orange color for flames
+        let flames = [];
+
+        class Particle {
+            constructor(x, y, color, isFlame = false, isSmoke = false) {
+                this.x = x;
+                this.y = y;
+                this.color = color;
+                this.alpha = isFlame ? Math.random() : 1;
+                this.size = 2;
+                this.flashSpeed = isFlame ? Math.random() * 0.02 + 0.01 : 0;
+                this.isFlame = isFlame;
+                this.isSmoke = isSmoke;
+                this.smokeSpeed = isSmoke ? Math.random() * 2 + 1 : 0;
+            }
+
+            update() {
+                if (this.isFlame) {
+                    this.alpha += this.flashSpeed;
+                    if (this.alpha > 1 || this.alpha < 0) {
+                        this.flashSpeed = -this.flashSpeed;
+                    }
+                } else if (this.isSmoke) {
+                    this.y -= this.smokeSpeed;
+                    this.alpha -= 0.02;
+                    if (this.alpha <= 0) {
+                        particles.splice(particles.indexOf(this), 1);
+                    }
+                }
+            }
+
+            draw() {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2, false);
+                ctx.fillStyle = `rgba(${this.color}, ${this.alpha})`;
+                ctx.fill();
+            }
+        }
+
+        function createCakeParticles() {
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            const cakeHeight = canvas.height / 10; // Adjusted for 1/4 screen height
+            const bottomLayerWidth = canvas.width / 4;
+            const topLayerWidth = bottomLayerWidth * 0.75;
+            const candleHeight = cakeHeight; // Candle height equal to cake height
+
+            // Bottom layer
+            for (let y = 0; y < cakeHeight; y += 4) {
+                for (let x = 0; x < bottomLayerWidth; x += 4) {
+                    const color = cakeColors[(x + y) % cakeColors.length];
+                    particles.push(new Particle(centerX - bottomLayerWidth / 2 + x, centerY + cakeHeight / 2 - y, color));
+                }
+            }
+
+            // Top layer
+            for (let y = 0; y < cakeHeight; y += 4) {
+                for (let x = 0; x < topLayerWidth; x += 4) {
+                    const color = cakeColors[(x + y) % cakeColors.length];
+                    particles.push(new Particle(centerX - topLayerWidth / 2 + x, centerY - cakeHeight / 2 - y, color));
+                }
+            }
+
+            // Candles
+            const candleWidth = 6;
+            for (let i = -1; i <= 1; i++) {
+                for (let y = 0; y < candleHeight; y += 4) {
+                    for (let x = 0; x < candleWidth; x += 4) {
+                        const color = '255, 255, 255'; // White color for candles
+                        particles.push(new Particle(centerX + i * (topLayerWidth / 3) + x - candleWidth / 2, centerY - cakeHeight - y - 4, color));
+                    }
+                }
+            }
+
+            // Candle flames
+            for (let i = -1; i <= 1; i++) {
+                const flame = new Particle(centerX + i * (topLayerWidth / 3), centerY - cakeHeight - candleHeight - 8, flameColor, true);
+                particles.push(flame);
+                flames.push(flame);
+            }
+        }
+
+        function extinguishCandles() {
+            flames.forEach(flame => {
+                const smokeColor = '255, 255, 255';
+                for (let i = 0; i < 3; i++) {
+                    particles.push(new Particle(flame.x, flame.y, smokeColor, false, true));
+                }
+                particles.splice(particles.indexOf(flame), 1);
+            });
+            flames = [];
+        }
+
+        function loop() {
+            requestAnimationFrame(loop);
+            ctx.globalCompositeOperation = 'destination-out';
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.globalCompositeOperation = 'lighter';
+
+            particles.forEach(particle => {
+                particle.update();
+                particle.draw();
+            });
+        }
+
+        canvas.addEventListener('click', extinguishCandles);
+
+        createCakeParticles();
+        loop();
+    </script>
+</body>
+</html>
